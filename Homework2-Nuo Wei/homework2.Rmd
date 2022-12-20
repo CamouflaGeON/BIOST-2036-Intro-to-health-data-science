@@ -1,0 +1,190 @@
+---
+title: 'Homework 2'
+author: 'Yongseok Park'
+date: "9/27/2022"
+output:
+  bookdown::html_document2: 
+    code_folding: "hide"
+    toc: yes
+    number_sections: yes
+---
+
+<!-- You may add message=FALSE, warning=FALSE in knitr -->
+<!--     options to suppress messages and warnings -->
+
+```{r setup, include=FALSE, message=F}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+# Data of Firearm Deaths by states in 2016
+
+```{r, warning=FALSE,message=FALSE,include=FALSE,echo = TRUE}
+library(tidyverse)
+library(readxl)
+
+library(patchwork)
+
+library(cowplot)
+
+data <- read_excel("FirearmDeath2016.xlsx")
+
+#View(data)
+
+```
+
+```{r,fig.height=5, fig.width=10, message=FALSE}
+
+p0 <- data %>%
+         ggplot(aes(y = Deaths, x = Rank, color = Region)) +
+         geom_point(alpha = 0.25) +
+         #geom_smooth(se = FALSE) +
+         theme_bw() +
+         scale_color_brewer(palette = "Set1")
+
+
+
+#q0 <- ggplot(data, aes(x = Grade, y = Rate))+
+         #theme_bw() +
+         #geom_boxplot(aes(fill = Grade)) # Change fill color by groups
+
+p0 + labs(tag = "p0") #+ q0 + labs(tag = "q0")
+```
+
+
+# p0
+
+For finding the relation between Gun Law Strictness and firearm deaths in USA from CDC database 2016, I want to start with p0: x presents the rank of each states in USA and y presents what number of deaths in each state. In addition, the database divided nation into four different region: Midwest, northeast, south, and west with corresponding colors. 
+
+```{r,fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
+
+p1 <- data %>%
+         ggplot(aes(y = Deaths, x = Rank, color = Region)) +
+         geom_point(alpha = 0.25) +
+         geom_smooth(se = FALSE) +
+         theme_bw() +
+         scale_color_brewer(palette = "Set1")
+
+
+
+p1 + labs(tag = "p1")
+```
+
+
+# p1
+
+For exploring the distribution of deaths between those four regions, I add the smooth line of each region to present how the number of death change when the rank of gun law grade increasing. In general, deaths go down when ranking increasing, then go up when very end of rank, however, there is a obvious peak in first half part of distribution of deaths in Northeast, by observing origin dataset, the unique case is PA which has 1636 deaths but only rank 13 in the nation. I think that firearms office should pay more attention to this situation in PA.
+
+
+```{r,fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
+
+p1 <- p1 + labs(x = "Ranks of Gun law grade",
+       y = "Total number of Deaths")
+
+p2 <- p1 +
+  labs(title = "Gun Law Strictness and firearm deaths in USA",
+       subtitle = "CDC dataset, 2016",
+       caption = Sys.Date(),
+       tag = "p1",
+       color = "Region") +
+  
+  theme(axis.text.y = element_text(color = "green", size = 14),
+        axis.text.x = element_text(color = "red",  angle = 45, vjust = 0.5),
+        axis.title  = element_text(color = "blue", size = 16)
+        )
+
+p2 + labs(tag = "p2")
+
+```
+
+
+# p2
+
+In this part, I want to add title, legends, axes, labels to making the plot more efficient.
+
+
+
+
+```{r,fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
+
+p3 <- data %>%
+         ggplot(aes(y = Rate, x = Rank, color = Region)) +
+         geom_point(alpha = 0.25) +
+         geom_smooth(se = FALSE) +
+         theme_bw() +
+         scale_color_brewer(palette = "Set1")
+
+p3 <- p3 + labs(x = "Ranks of Gun law grade",
+       y = "Deaths per 100K")
+
+p3 <- p3 +
+  labs(title = "Gun Law Strictness and firearm deaths in USA",
+       subtitle = "CDC dataset, 2016",
+       caption = Sys.Date(),
+       tag = "p1",
+       color = "Region") +
+  
+  theme(axis.text.y = element_text(color = "green", size = 14),
+        axis.text.x = element_text(color = "red",  angle = 45, vjust = 0.5),
+        axis.title  = element_text(color = "blue", size = 16)
+        )
+
+p3 + labs(tag = "p3")
+```
+
+# P3 
+
+If I change the y value from number of death to death per 100k, I can find that almost every region is higher deaths per 100k when the ranks of gun law grade increase. In other words, nationally when the mandatory laws are not as strict, the deaths rate per 100k is up.
+
+
+```{r, fig.height=5, fig.width=7}
+
+p4 <- ggplot(data = data, aes(y = Deaths, x = Rank))+
+  
+  geom_point(aes(size = Population, color = gdpPc, shape = Region)) +
+  
+  guides(colour = guide_colourbar(order = 1),
+         shape = guide_legend(order = 2),
+         size = guide_legend(order = 3)) +
+  
+  theme_bw()
+
+
+p5 <- ggplot(data = data, aes(y = Deaths, x = Rank))+
+  geom_point(aes(color = Grade, 
+                 size = Population, 
+                 shape = Region)) +
+  theme_bw()
+
+p5 = p5 + guides(size = guide_legend(order = 3),
+                 shape = guide_legend(order = 2),
+                 color = guide_legend(order = 1))
+
+
+p4 + labs(tag = "p4")+ p5+ labs(tag = "p5")
+
+
+```
+
+
+# p3 & p4
+
+For those two plot, x and y still present rank and deaths in the nation but size of point means the population of each state, shape of point means the region in nation, and color is GDP per capita in p3 and Grade of Gun Law Strictness(A is strictest).
+
+p3: In the relation between Gun Law Strictness and firearm deaths in USA, I want to find whether or not GDP per capita is one reason affect the relation. In this case, developed regions have higher rank of Gun law strictness than states that have relatively low GDP per capita. From top to bottom, the first two states have relatively higher GDP with high number of death, they are TX and CA, furthermore, the third stats is FL have high number of death but low GDP.
+
+
+p4: In the relation between Gun Law Strictness and firearm deaths in USA, I want to find whether Grade of gun law is one reason affect the relation. In this case, most of Northeast states have stricter law than other regions in the nation, another hand, midwest and south region have relatively lax laws but it is means that those places contain higher number of deaths expect some states is densely populated and relatively developed.
+
+
+```{r, fig.height=10, fig.width=10}
+
+p2c<- p2+ labs(tag = "p2")
+p3c<- p3+ labs(tag = "p3")
+p4c<- p4+ labs(tag = "p4")
+p5c<- p5+ labs(tag = "p5")
+
+plot_grid(p2c, p3c, p4c, p5c, ncol = 2)
+
+
+
+```

@@ -1,0 +1,93 @@
+---
+title: 'Homework 1 '
+author: "Nuo Wei"
+date: "9/19/2021"
+output:
+  bookdown::html_document2: 
+    toc: yes
+    number_sections: yes
+    fig_caption: yes
+    fig_width: 6
+    fig_height: 4
+    theme: paper
+    code_folding: "hide"
+---
+
+<!-- You may add message=FALSE, warning=FALSE in knitr -->
+
+<!--     options to suppress messages and warnings -->
+
+```{r, warning=FALSE,message=FALSE,include=FALSE,echo = TRUE}
+
+
+library(dslabs)
+data("murders")
+library(tidyverse)
+
+library(ggthemes)
+library(ggrepel)
+
+library(knitr)
+library(patchwork)
+
+```
+
+```{r setup, include=FALSE,warning=FALSE,message=FALSE,echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+r <- murders %>%
+  summarize(pop=sum(population), tot=sum(total)) %>%
+  mutate(rate = tot/pop*10^6) %>% .$rate
+
+ds_theme_set()
+
+p1 = murders %>% ggplot(aes(x = population/10^6, y = total, label = abb)) +
+  geom_abline(intercept = log10(r), lty=2, col="darkgrey") +
+  geom_point(aes(color=region), size = 3) +
+  geom_text_repel() +
+  scale_x_log10() +
+  scale_y_log10() +
+  xlab("Populations in millions") +
+  ylab("Total number of murders") +
+  ggtitle("US Gun Murders in 2010") +
+  scale_color_discrete(name="Region")
+
+
+p2 = murders %>% ggplot(aes(x = population/10^6, y = total/population*1e6, label = abb)) +
+  geom_hline(yintercept = r, lty=2, col="darkgrey") +
+  geom_point(aes(color=region), size = 3) +
+  geom_text_repel() +
+  scale_x_log10() +
+  scale_y_log10() +
+  xlab("Populations in millions") +
+  ylab("Number of murders per million") +
+  ggtitle("US Gun Murders in 2010") +
+  scale_color_discrete(name="Region")
+
+```
+
+```{r, fig.height=5, fig.width=10,warning=FALSE,message=FALSE,echo=TRUE}
+p1+p2+theme(legend.position="none")
+
+```
+
+# Gun Murder
+
+The population data is the official data from the U.S. Census Bureau. The murder rates and gun murder rates were calculated based on [the FBI reports] (https://ucr.fbi.gov/crime-in-the-u.s/2010/crime-in-the-u.s.-2010/tables/10tbl20.xls). The official population of each state for 2010 and gun ownership rates were added for context.
+
+The gun murders in 2010 from FBI Uniform Crime Reporting (UCR) program was 8,775[(reference).](https://ucr.fbi.gov/crime-in-the-u.s/2010/crime-in-the-u.s.-2010/tables/10tbl20.xls) The total number of murders from all weapons was 12,996. These figures includes murders and willful manslaughters, but excludes "deaths caused by negligence, suicide, or accident" and justifiable homicides[(reference).](https://ucr.fbi.gov/crime-in-the-u.s/2010/crime-in-the-u.s.-2010/violent-crime/murdermain) The U.S. reports a 70% conviction rate for murder prosecutions.
+
+# Research
+
+## Figure 1
+
+The relationship between populations in millions and the total number of murders is a relatively strong positive correlation which means when the populations in millions rise, so the total number of murders between states and states. In this case, CA has the largest population and the most murders in the nation, so CA locates top right in this plot and is very close to the line. On the other hand, VT is quite the opposite of CA which has almost minimum population and the least murder. DC is a special case in this plot, as we know DC is the capital city of the nation with city size population, but the total number of murders is higher than in some states. West and North central regions have a relatively low number of murders except for a few relatively developed and densely populated states, and the distribution of the rest states meets the positive correlation line with populations and murders. 
+
+
+## Figure 2
+
+There is no correlation between populations and the number of murders per million, so the line trend is horizontal at 30 murders per million, and most states are located near this line. Compare to the first plot, the second one can more likely present the average number of murders in the state based on the population. In this case, DC still has the most murders per million and LA has second which means the security situation is not very positive in these two states. Similar to the first plot, VT is quite the opposite of DC which has almost minimum population and the least murder. West and North central regions are below the average number of murders per million except for a few relatively developed and densely populated states. 
+
+## Gun Violence Control
+U.S. legal policies at the federal, state and local levels have sought to address gun violence through a variety of approaches, including restricting gun purchases by youth and other "high-risk" individuals, setting waiting periods for gun purchases, establishing gun "buy-back" programs, targeted law enforcement and policing strategies, harsher sentencing for gun law violators, educational programs for parents and children, and community outreach.Research shows that these policies have had mixed results. Some policies, such as gun "buy-back" programs, have had little success, while programs like Operation Ceasefire (a strategy to reduce gang violence) have been effective in reducing youth violence.[(reference).](https://en.wikipedia.org/wiki/Operation_Ceasefire)
+

@@ -1,0 +1,747 @@
+---
+title: 'Homework 3'
+author: 'Nuo Wei'
+date: "10/25/2022"
+output:
+  bookdown::html_document2: 
+    code_folding: "hide"
+    toc: yes
+    number_sections: yes
+---
+
+```{r setup, include=FALSE, message=F}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+```{r, warning=FALSE,message=FALSE,include=FALSE,echo = TRUE}
+library(dslabs)
+library(tidyverse)
+
+library(ggthemes)
+library(ggrepel)
+
+library(knitr)
+library(patchwork)
+
+
+library(lubridate)
+library(scales)
+library(rvest)
+library(dslabs)
+
+
+require(ggrepel)
+require(ggspatial)
+require(sf)
+require(rnaturalearth)
+require(rnaturalearthdata)
+require(maps)
+require(tools)
+
+```
+
+# Import all required data using read_csv() and converting unit
+
+```{r, warning=FALSE,message=FALSE,include=FALSE,echo = TRUE}
+
+s1 <- read_csv("Raw Data/child_mortality_0_5_year_olds_dying_per_1000_born.csv")
+
+s2 <- read_csv("Raw Data/children_per_woman_total_fertility.csv")
+
+
+s3 <- read_csv("Raw Data/income_per_person_gdppercapita_ppp_inflation_adjusted.csv")
+
+#view(s3)
+s3 <- s3 %>% mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)B" = "\\1000000000",
+                                                        "(\\d+)\\." = "" ))))
+
+s4 <- read_csv("Raw Data/life_expectancy_years.csv")
+
+s5 <- read_csv("Raw Data/murder_total_deaths.csv")
+
+s5 <- s5 %>% mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)B" = "\\1000000000",
+                                                        "(\\d+)\\." = "" ))))
+
+s6 <- read_csv("Raw Data/population_total.csv")
+
+view(s6)
+
+s6 <- s6 %>% mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)B" = "\\1000000000",
+                                                        "(\\d+)\\." = "" ))))
+
+s6 <- s6 |> mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)\\." = "" ))))
+
+
+s6
+
+
+s7 <- read_csv("Raw Data/ddf--entities--geo--unhcr_region.csv")
+
+s8 <- read_csv("Raw Data/ddf--entities--geo--unicef_region.csv")
+
+s9 <- read_csv("Raw Data/ddf--entities--geo--world_4region.csv")
+
+s10 <- read_csv("Raw Data/ddf--entities--geo--world_6region.csv")
+
+s11 <- read_csv("Raw Data/ddf--entities--geo--country.csv")
+
+```
+
+# Collecting all numeric parts into a tidy dataset
+
+```{r}
+s1_tidy <- s1 %>%
+  pivot_longer(c(as.character(colnames(s1[,2]):colnames(s1[,ncol(s1)]))), names_to = "year", values_to = "child_mortality")
+
+s2_tidy <- s2 %>%
+  pivot_longer(c(as.character(colnames(s2[,2]):colnames(s2[,ncol(s2)]))), names_to = "year", values_to = "fertility")
+
+s3_tidy <- s3 %>%
+  pivot_longer(c(as.character(colnames(s3[,2]):colnames(s3[,ncol(s3)]))), names_to = "year", values_to = "gdppc")
+
+s4_tidy <- s4 %>%
+  pivot_longer(c(as.character(colnames(s4[,2]):colnames(s4[,ncol(s4)]))), names_to = "year", values_to = "life_expectancy")
+
+s5_tidy <- s5 %>%
+  pivot_longer(c(as.character(colnames(s5[,2]):colnames(s5[,ncol(s5)]))), names_to = "year", values_to = "murder_total")
+
+s6_tidy <- s6 %>%
+  pivot_longer(c(as.character(colnames(s6[,2]):colnames(s6[,ncol(s6)]))), names_to = "year", values_to = "population")
+
+
+k1 <- left_join(s1_tidy, s2_tidy)
+k2 <- left_join(k1, s3_tidy)
+k3 <- left_join(k2, s4_tidy)
+k4 <- left_join(k3, s5_tidy)
+k5 <- left_join(k4, s6_tidy)
+k5
+
+```
+
+
+
+
+# Collecting all regions parts into a tidy dataset
+
+```{r}
+select1 <- select(s11, name, unhcr_region, unicef_region, world_4region, world_6region)
+names(select1) <- c("country", "unhcr_region", "unicef_region", "world_4region", "world_6region")
+
+s7 <- select(s7,unhcr_region, name)
+names(s7) <- c("unhcr_region", "name1")
+
+s8 <- select(s8, unicef_region, name)
+names(s8) <- c("unicef_region", "name2")
+
+s9 <- select(s9, world_4region, name)
+names(s9) <- c("world_4region", "name3")
+
+s10 <- select(s10, world_6region, name)
+names(s10) <- c("world_6region", "name4")
+
+q1 <- left_join(select1, s7)
+
+q2 <- left_join(q1, s8)
+
+q3 <- left_join(q2, s9)
+
+q4 <- left_join(q3, s10)
+
+select3 <- left_join(k5, q4)
+
+select3
+```
+
+# Selecting column what we want and removing with all NA on all numeric variables
+
+```{r}
+select4<- select3[,-9:-12]
+
+select4 <- arrange(select4, year)
+
+select5 <- drop_na(select4)
+
+
+names(select5) <- c("country", "year", "child_mortality", "fertility", "gdppc","life_expectancy", "murder_total",
+                    "population", "unhcr_region", "unicef_region", "world_4region", "world_6region")
+
+#View(select5)
+select5
+```
+
+# Making figures using life_expectacy vs child_mortility
+
+
+```{r,fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
+
+select5 %>% 
+    group_by(year, world_6region) %>% 
+    summarize(
+      ave_life_expectancy = mean(life_expectancy, na.rm = TRUE),
+      ave_child_mortality = mean(child_mortality, na.rm = TRUE)
+    ) %>%
+  ggplot(aes(x=ave_life_expectancy, y=ave_child_mortality))+
+      geom_line(aes(color=world_6region, group=world_6region), size=1) +
+      theme_bw()
+
+```
+
+# life_expectacy vs child_mortility
+
+
+From the plot we made previously, we can find that the relationship between life expectancy and child mortality is when life expectancy increases, then child mortality decreases over time. Since the data was recorded from 1989 to 2018, the life expectancy of region Europe and Central Asia is highest over 75 with very low child mortality. However, sub-Saharan Africa is a different story, there is obvious data fluctuation at the beginning of the line, also, this region has a relatively lower life expectancy and higher child mortality than the rest of the world. This reflects some extent the economic and political situation of the region.
+
+
+
+# Making figures using life_expectacy vs child_mortility(weight=population)
+
+```{r,fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
+select5 %>% 
+    group_by(year, world_6region) %>%
+    summarize(
+      ave_life_expectancy = weighted.mean(life_expectancy, w = as.numeric(population), na.rm = TRUE),
+      ave_child_mortality = weighted.mean(child_mortality, w = as.numeric(population), na.rm = TRUE)
+    ) %>%
+  ggplot(aes(x=ave_life_expectancy, y=ave_child_mortality))+
+      geom_line(aes(color=world_6region, group=world_6region), size=1) +
+      theme_bw()
+
+```
+
+
+# life_expectacy vs child_mortility(weight=population)
+
+When we add the weight = population and redo this plot, we can get a similar plot like without weight. Still, when considering the case population, most regions have a high life expectancy and low child mortality. However, south Asia and Sub-Saharan Africa are two exceptional cases there, life expectancy in South Asia increased over 10 years in the time with a huge decrease in child mortality, in this case, those changes also can be found in Sub-Saharan Africa but there is still a lot of room for progress due to the poor base.
+
+# Final thoughts
+
+When I generate my data, I observe that there are lots of NA data due to those numeric variables containing different periods such as the time for gdppc from 1799 to 2059 and murder total from 1989 to 2018. After collecting those data together, because of the year from 1799 to 2099, and for those years don't have data, r mark NA in their positions. And this situations also happen for regions. As a result, if I want to generate plots or do research deeply, I should remove all the rows with NA, and finally the time only from 1989 to 2018. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+
+
+url <- "https://www.worldometers.info/coronavirus/country/us/"
+read_html(url)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+#import data
+
+#select5
+
+#study causes of child deaths
+
+All_cause <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/all_causes_deaths_in_children_1_59_months_total_deaths.csv")
+All_cause <- All_cause %>% mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)B" = "\\1000000000",
+                                                        "(\\d+)\\." = "" ))))
+#All_cause
+
+
+Diarrhoeal <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/diarrhoeal_deaths_in_children_1_59_months_per_1000_births.csv")
+Diarrhoeal <- plyr::rename(Diarrhoeal, c("2007"="Diarrhoeal"))
+
+HIV <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/hiv_deaths_in_children_1_59_months_per_1000_births.csv")
+#HIV <- plyr::rename(HIV, c("2007"="HIV"))
+
+Injury <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/injury_deaths_in_children_1_59_months_per_1000_births.csv")
+#Injury <- plyr::rename(Injury, c("2007"="Injury"))
+
+Malaria <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/malaria_deaths_in_children_1_59_months_per_1000_births.csv")
+#Malaria <- plyr::rename(Malaria, c("2007"="Malaria"))
+
+Measles <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/measles_deaths_in_children_1_59_months_per_1000_births.csv")
+#Measles <- plyr::rename(Measles, c("2007"="Measles"))
+
+Meningitis <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/meningitis_deaths_in_children_1_59_months_per_1000_births.csv")
+#Meningitis <- plyr::rename(Meningitis, c("2007"="Meningitis"))
+
+NCD <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/ncd_deaths_in_children_1_59_months_per_1000_births.csv")
+#NCD <- plyr::rename(NCD, c("2007"="NCD"))
+
+OtherInfection <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/other_infections_deaths_in_children_1_59_months_per_1000_birt.csv")
+#OtherInfection <- plyr::rename(OtherInfection, c("2007"="OtherInfection"))
+
+Pertussis <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/pertussis_deaths_in_children_1_59_months_per_1000_births.csv")
+#Pertussis <- plyr::rename(Pertussis, c("2007"="Pertussis"))
+
+Pneumonia <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/pneumonia_deaths_in_children_1_59_months_per_1000_births.csv")
+#Pneumonia <- plyr::rename(Pneumonia, c("2007"="Pneumonia"))
+
+
+
+
+
+
+
+
+
+
+all_cause <- drop_na(inner_join(Diarrhoeal, HIV, by = "country"))
+all_cause <- drop_na(inner_join(all_cause, Injury, by = "country"))
+all_cause <- drop_na(inner_join(all_cause, Malaria, by = "country"))
+all_cause <- drop_na(inner_join(all_cause, Measles, by = "country"))
+all_cause <- drop_na(inner_join(all_cause, Meningitis, by = "country"))
+all_cause <- drop_na(inner_join(all_cause, NCD, by = "country"))
+all_cause <- drop_na(inner_join(all_cause, OtherInfection, by = "country"))
+all_cause <- drop_na(inner_join(all_cause, Pertussis, by = "country"))
+all_cause <- drop_na(inner_join(all_cause, Pneumonia, by = "country"))
+all_cause
+
+
+
+
+
+
+
+
+
+
+```
+
+```{r}
+#study causes of child deaths
+
+
+
+```
+
+
+
+
+
+
+
+
+```{r}
+
+#Diarrhoeal <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/diarrhoeal_deaths_in_children_1_59_months_total_deaths.csv")
+#Diarrhoeal <- plyr::rename(Diarrhoeal, c("2007"="Diarrhoeal"))
+
+HIV <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/hiv_deaths_in_children_1_59_months_total_deaths.csv")
+#HIV <- plyr::rename(HIV, c("2007"="HIV"))
+
+HIV <- HIV %>% mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)B" = "\\1000000000",
+                                                        "(\\d+)\\." = "" ))))
+
+
+
+
+Injury <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/injury_deaths_in_children_1_59_months_total_deaths.csv")
+#Injury <- plyr::rename(Injury, c("2007"="Injury"))
+
+Injury <- Injury %>% mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)B" = "\\1000000000",
+                                                        "(\\d+)\\." = "" ))))
+
+
+
+
+Malaria <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/malaria_deaths_in_children_1_59_months_total_deaths.csv")
+#Malaria <- plyr::rename(Malaria, c("2007"="Malaria"))
+
+Malaria <- Malaria %>% mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)B" = "\\1000000000",
+                                                        "(\\d+)\\." = "" ))))
+
+
+
+
+Measles <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/measles_deaths_in_children_1_59_months_total_deaths.csv")
+#Measles <- plyr::rename(Measles, c("2007"="Measles"))
+
+
+Measles <- Measles %>% mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)B" = "\\1000000000",
+                                                        "(\\d+)\\." = "" ))))
+
+
+
+
+Meningitis <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/meningitis_deaths_in_children_1_59_months_total_deaths.csv")
+#Meningitis <- plyr::rename(Meningitis, c("2007"="Meningitis"))
+
+Meningitis <- Meningitis %>% mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)B" = "\\1000000000",
+                                                        "(\\d+)\\." = "" ))))
+
+
+NCD <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/ncd_deaths_in_children_1_59_months_total_deaths.csv")
+#NCD <- plyr::rename(NCD, c("2007"="NCD"))
+
+NCD <- NCD %>% mutate(across(.cols = -country, 
+                          .fns = ~str_replace_all(.x, c("(\\d+)k" = "\\1000", 
+                                                        "(\\d+)M" = "\\1000000",
+                                                        "(\\d+)B" = "\\1000000000",
+                                                        "(\\d+)\\." = "" ))))
+
+#OtherInfection <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/other_infections_deaths_in_children_1_59_months_total_deaths.csv")
+#OtherInfection <- plyr::rename(OtherInfection, c("2007"="OtherInfection"))
+
+#Pertussis <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/pertussis_deaths_in_children_1_59_months_total_deaths.csv")
+#Pertussis <- plyr::rename(Pertussis, c("2007"="Pertussis"))
+
+#Pneumonia <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/pneumonia_deaths_in_children_1_59_months_total_deaths.csv")
+#Pneumonia <- plyr::rename(Pneumonia, c("2007"="Pneumonia"))
+
+
+
+
+```
+
+
+
+
+
+
+
+```{r}
+
+
+HIV_tidy <- HIV %>%
+  pivot_longer(c(as.character(colnames(HIV[,2]):colnames(HIV[,ncol(HIV)]))), names_to = "year", values_to = "HIV")
+
+Injury_tidy <- Injury%>%
+  pivot_longer(c(as.character(colnames(Injury[,2]):colnames(Injury[,ncol(Injury)]))), names_to = "year", values_to = "Injury")
+
+
+Malaria_tidy <- Malaria %>%
+  pivot_longer(c(as.character(colnames(Malaria[,2]):colnames(Malaria[,ncol(Malaria)]))), names_to = "year", values_to = "Malaria")
+
+
+Measles_tidy <- Measles %>%
+  pivot_longer(c(as.character(colnames(Measles[,2]):colnames(Measles[,ncol(Measles)]))), names_to = "year", values_to = "Measles")
+
+
+Meningitis_tidy <- Meningitis %>%
+  pivot_longer(c(as.character(colnames(Meningitis[,2]):colnames(Meningitis[,ncol(Meningitis)]))), names_to = "year", values_to = "Meningitis")
+
+NCD_tidy <- NCD %>%
+  pivot_longer(c(as.character(colnames(NCD[,2]):colnames(NCD[,ncol(NCD)]))), names_to = "year", values_to = "NCD")
+
+
+
+
+all_cause_child <- left_join(HIV_tidy, Injury_tidy)
+all_cause_child <- left_join(all_cause_child, Malaria_tidy)
+all_cause_child <- left_join(all_cause_child, Measles_tidy)
+all_cause_child <- left_join(all_cause_child, Meningitis_tidy)
+all_cause_child <- left_join(all_cause_child, NCD_tidy)
+all_cause_child
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+
+
+#DF1 <- DF %>% mutate(across(.cols = -country, 
+                      #    .fns = ~func(.x)))
+
+#DF1
+
+
+
+func <- function(x) {
+  for(i in 1:NROW(x)) 
+    x[i] <- eval(parse(text=str_replace_all(x[i], c("k" = "*1000", 
+                                                        "M" = "*1000000",
+                                                        "B" = "*1000000000"
+                                                        ))))
+  x
+}
+
+
+
+
+
+```
+
+
+
+
+```{r}
+
+
+#life expectancy, population, income, child mortality, CO2 emission per person and Babies per woman
+
+life_ex <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/life_expectancy_years.csv")
+
+popu <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/population_total.csv")
+
+popu <- popu %>% mutate(across(.cols = -country, 
+                          .fns = ~func(.x)))
+
+
+
+
+
+income <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/income_per_person_gdppercapita_ppp_inflation_adjusted.csv")
+income <- income %>% mutate(across(.cols = -country, 
+                          .fns = ~func(.x)))
+
+child_mortality <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/child_mortality_0_5_year_olds_dying_per_1000_born.csv")
+
+
+CO2 <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/co2_emissions_tonnes_per_person.csv")
+
+
+baby <- read_csv("D:/University of Pittsburgh/BIOST 2036 Intro to health data science/Project-Nuo Wei/children_per_woman_total_fertility.csv")
+
+
+
+
+
+life_ex_tidy <- life_ex %>% select(country,c(as.character("1960":"2020"))) %>%
+  pivot_longer(c(as.character("1960":"2020")), names_to = "year", values_to = "life_expectancy")
+
+
+popu_tidy <- popu %>% select(country,c(as.character("1960":"2020"))) %>%
+  pivot_longer(c(as.character("1960":"2020")), names_to = "year", values_to = "population") %>%
+  mutate(population=as.numeric(population))
+
+
+income_tidy <- income %>% select(country,c(as.character("1960":"2020"))) %>%
+  pivot_longer(c(as.character("1960":"2020")), names_to = "year", values_to = "income") %>%
+  mutate(income = as.numeric(income))
+
+child_mortality_tidy <- child_mortality %>% select(country,c(as.character("1960":"2020"))) %>%
+  pivot_longer(c(as.character("1960":"2020")), names_to = "year", values_to = "child_mortality")
+
+
+CO2_tidy <- CO2 %>% select(country,c(as.character("1960":"2017"))) %>%
+  pivot_longer(c(as.character("1960":"2017")), names_to = "year", values_to = "CO2")
+
+
+baby_tidy <- baby %>% select(country,c(as.character("1960":"2020"))) %>%
+  pivot_longer(c(as.character("1960":"2020")), names_to = "year", values_to = "baby")
+
+Study <- left_join(life_ex_tidy, popu_tidy)
+Study <- left_join(Study, income_tidy)
+Study <- left_join(Study, child_mortality_tidy)
+Study <- left_join(Study, CO2_tidy)
+Study <- left_join(Study, baby_tidy)
+Study <- drop_na(Study)
+Study
+
+```
+
+
+
+```{r}
+data(gapminder)
+
+place <- gapminder %>% as_tibble(gapminder) %>% select(country, continent, region)
+place
+
+Study1 <- left_join(Study, place)
+Study1 <- drop_na(Study1)
+Study1
+
+```
+
+
+
+
+```{r,fig.height=5, fig.width=10}
+
+Study1 %>% 
+    group_by(year, continent) %>% 
+    summarize(
+      ave_life_expectancy = mean(life_expectancy, na.rm = TRUE),
+      ave_child_mortality = mean(child_mortality, na.rm = TRUE)
+    ) %>%
+  ggplot(aes(x=ave_life_expectancy, y=ave_child_mortality))+
+      geom_line(aes(color=continent, group=continent), size=1) +
+      theme_bw()
+
+#gapminder 
+
+
+grp_gap_data <- 
+  Study1 %>% 
+    group_by(year, continent) %>% 
+    summarize(
+      count = n(),
+      
+      #n_child_mortality = sum(child_mortality),
+      #n_life   = sum(!is.na(life_expectancy)),
+      #n_popu   = sum(!is.na(population)),
+      #n_incom  = sum(!is.na(income)),
+      #n_baby   = sum(!is.na(baby)),
+      #n_CO2    = sum(!is.na(CO2)),
+      
+      ave_life   = mean(life_expectancy, na.rm = TRUE),
+      ave_popu   = mean(population, na.rm = TRUE),
+      ave_income   = mean(income, na.rm = TRUE),
+      ave_child_mortality = mean(child_mortality, na.rm = TRUE),
+      ave_CO2   = mean(CO2, na.rm = TRUE),
+      ave_baby   = mean(baby, na.rm = TRUE),
+    )
+
+
+grp_gap_data
+
+
+
+p1 <- grp_gap_data %>% 
+  ggplot(aes(color=continent, group=continent)) + 
+  geom_point(aes(x=year, y=ave_life)) +
+  scale_x_discrete(breaks=(c(1960,1970,1980,1990,2000,2010,2020)),
+                              labels=c("1960","1970","1980","1990","2000","2010","2020"))
+
+
+
+ # scale_x_discrete(labels = abbreviate)
+
+
+#           scale_x_discrete(breaks=(c(1960,1970,1980,1990,2000,2010,2020)),
+      #                        labels=c("1960","1970","1980","1990","2000","2010","2020"))
+
+
+p2 <- grp_gap_data %>% ggplot(aes(color=continent, group=continent)) + 
+           geom_point(aes(x=year, y=ave_popu)) +
+  scale_x_discrete(breaks=(c(1960,1970,1980,1990,2000,2010,2020)),
+                              labels=c("1960","1970","1980","1990","2000","2010","2020"))
+
+p3 <- grp_gap_data %>% ggplot(aes(color=continent, group=continent)) + 
+           geom_point(aes(x=year, y=ave_income)) +
+  scale_x_discrete(breaks=(c(1960,1970,1980,1990,2000,2010,2020)),
+                              labels=c("1960","1970","1980","1990","2000","2010","2020"))
+
+
+p4 <- grp_gap_data %>% ggplot(aes(color=continent, group=continent)) + 
+           geom_point(aes(x=year, y=ave_child_mortality)) +
+  scale_x_discrete(breaks=(c(1960,1970,1980,1990,2000,2010,2020)),
+                              labels=c("1960","1970","1980","1990","2000","2010","2020"))
+
+p5 <- grp_gap_data %>% ggplot(aes(color=continent, group=continent)) + 
+           geom_point(aes(x=year, y=ave_CO2)) +
+  scale_x_discrete(breaks=(c(1960,1970,1980,1990,2000,2010,2020)),
+                              labels=c("1960","1970","1980","1990","2000","2010","2020"))
+
+p6 <- grp_gap_data %>% ggplot(aes(color=continent, group=continent)) + 
+           geom_point(aes(x=year, y=ave_baby)) +
+  scale_x_discrete(breaks=(c(1960,1970,1980,1990,2000,2010,2020)),
+                              labels=c("1960","1970","1980","1990","2000","2010","2020"))
+
+
+
+p1 + p2 + p3 + p4 + p5 + p6
+
+
+```
+
+
+```{r}
+
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
