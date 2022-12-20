@@ -1,0 +1,143 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+x=c("5k","1.2w")
+x
+x=str_replace(x,"k","\\*10000")
+x=str_replace(x,"w","\\*1000")
+x
+y=c(eval(parse(text=x[1])),eval(parse(text=x[2])))
+y
+
+#eval()
+#eval(parse(text=x[2])
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+DF <- data.frame(country = c("A", "B"),
+                 `1799` = c("8.1M", "3.4k"),
+                 `1800` = c("2400", "75M"),
+                 `1801` = c("6k", "23"),check.names = FALSE)
+
+DF
+
+
+
+
+DF1 <- DF %>% mutate(across(.cols = -country, 
+                          .fns = ~func(.x)))
+
+DF1
+
+
+
+func <- function(x) {
+  for(i in 1:NROW(x)) 
+    x[i] <- eval(parse(text=str_replace_all(x[i], c("k" = "*1000", 
+                                                        "M" = "*1000000",
+                                                        "B" = "*1000000000"
+                                                        ))))
+  x
+}
+
+```
+
+
+
+
+
+
+
+```{r}
+
+
+
+x <- c("1.4k", "14k")
+
+as.numeric(sub("k", "e3", x, fixed = TRUE))
+
+
+
+
+
+gsub('\\.', '', DF1)
+
+
+
+
+
+
+
+
+mystr <- c("16.1428",          
+       "52.135.1",         
+       "40.114.4",          
+       "83.068.8",         
+       "83.456.3",         
+       "55.181.5",         
+       "76.870.2",         
+       "96.910.2",         
+       "17.171.9",         
+       "49.617.4",         
+       "38.176.1",         
+       "50.717.7",         
+       "19.919.6")
+
+gsub("\\.(?=[^.]*\\.)", "", mystr, perl=TRUE)
+gsub("[.](?!\\d+$)", "", mystr, perl=TRUE)
+
+
+x <-  "2014.06.09"
+gsub('\\.', '', x)
+
+```
+
+
+
+
+```{r}
+20+qnorm(0.395) * 1/sqrt(16)
+
+(20.41-19)/(1/sqrt(16))
+
+
+1-pnorm(5.64)
+
+
+1-pnorm(-2.36)
+
+
+
+
+
+```
+
+
+
+
+
+
+
